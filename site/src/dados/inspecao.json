@@ -1,0 +1,57 @@
+{
+  "versao": 1,
+  "atualizado": "2026-11-07",
+  "ambientes": {
+    "rampa": {
+      "patologias": [
+        { "id": "rampa-1", "categoria": "hidraulica", "descricao": "Infiltração em alvenaria oriunda da rampa e do escoamento", "g": 4, "u": 4, "t": 3 },
+        { "id": "rampa-2", "categoria": "revestimentos", "descricao": "Desplacamento cerâmico e som cavo na mureta", "g": 3, "u": 2, "t": 4 },
+        { "id": "rampa-3", "categoria": "eletrica", "descricao": "Iluminação externa deficiente", "g": 2, "u": 3, "t": 3 },
+        { "id": "rampa-4", "categoria": "estrutura", "descricao": "Fissuras superficiais no guarda-corpo", "g": 2, "u": 2, "t": 3 }
+      ],
+      "notas": "18 pastilhas soltas na mureta lateral.",
+      "concluido": {}
+    },
+    "cozinha": {
+      "patologias": [
+        { "id": "cozinha-1", "categoria": "hidraulica", "descricao": "Caixa de gordura saturada e ralos sem fecho hídrico", "g": 4, "u": 4, "t": 5 },
+        { "id": "cozinha-2", "categoria": "revestimentos", "descricao": "Rejuntes deteriorados no piso e na parede", "g": 3, "u": 3, "t": 4 }
+      ],
+      "notas": "",
+      "concluido": {}
+    },
+    "sanfe": {
+      "patologias": [
+        { "id": "sanfe-1", "categoria": "hidraulica", "descricao": "Infiltração e umidade acentuada na laje", "g": 4, "u": 3, "t": 4 },
+        { "id": "sanfe-2", "categoria": "eletrica", "descricao": "Ponto de luz exposto e fiação próxima à umidade", "g": 4, "u": 3, "t": 4 }
+      ],
+      "notas": "",
+      "concluido": {}
+    },
+    "sanme": {
+      "patologias": [
+        { "id": "sanme-1", "categoria": "hidraulica", "descricao": "Infiltração e umidade acentuada na laje", "g": 4, "u": 3, "t": 4 },
+        { "id": "sanme-2", "categoria": "eletrica", "descricao": "Ponto de luz exposto e fiação próxima à umidade", "g": 4, "u": 3, "t": 4 }
+      ],
+      "notas": "",
+      "concluido": {}
+    },
+    "ginasio": {
+      "patologias": [
+        { "id": "ginasio-1", "categoria": "hidraulica", "descricao": "Infiltração na cobertura e caixas pluviais danificadas", "g": 4, "u": 4, "t": 4 },
+        { "id": "ginasio-2", "categoria": "estrutura", "descricao": "Recalque e desnível localizado no piso da quadra", "g": 3, "u": 3, "t": 5 },
+        { "id": "ginasio-3", "categoria": "eletrica", "descricao": "Refletores e fiação externa expostos", "g": 3, "u": 3, "t": 3 }
+      ],
+      "notas": "",
+      "concluido": {}
+    },
+    "a2-info": {
+      "patologias": [
+        { "id": "a2-info-1", "categoria": "revestimentos", "descricao": "Desplacamento cerâmico severo e áreas ocas no teste de percussão", "g": 3, "u": 2, "t": 4 },
+        { "id": "a2-info-2", "categoria": "estrutura", "descricao": "Fissuras nos vãos das janelas", "g": 2, "u": 3, "t": 3 }
+      ],
+      "notas": "",
+      "concluido": {}
+    }
+  }
+}

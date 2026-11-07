@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.capturas/
+.taste-skill/
+.netlify/
+*.zip
+.claude/

@@ -54,34 +54,65 @@ npm install
 npm run dev
 ```
 
-O site abre em http://localhost:5180. `npm test` roda os testes da lógica GUT e da validação dos
-dados; `npm run build` gera a versão publicável em `site/dist`.
+O site abre em http://localhost:5180. `npm test` roda os testes da lógica GUT, da validação dos
+dados e do redimensionamento das fotos; `npm run build` gera a versão publicável em `site/dist`.
 
-## Registrar patologias
+## Edição em equipe, em tempo real
 
-Os dados ficam em `site/src/dados/inspecao.json`. Para editar:
+O site pede login com uma conta Google. Qualquer conta pode **ver** o mapa; só os e-mails da lista da
+equipe **editam**. O dono do projeto administra a lista em **Equipe e permissões** (menu da conta).
 
-1. No site, clique no lápis (modo edição) e abra um ambiente no mapa.
-2. Adicione, edite ou remova patologias, marque as categorias concluídas e escreva anotações.
-   Tudo fica salvo no navegador até você baixar o arquivo.
-3. Clique em **Baixar inspecao.json** e substitua `site/src/dados/inspecao.json` pelo arquivo baixado.
-4. Publique o site de novo.
+- Ao abrir um ambiente, quem edita vê as quatro categorias, cada uma com **Adicionar**, e em cada
+  patologia **Editar GUT**, **Remover** e o botão **Foto**.
+- Toda alteração aparece na hora para quem está com o site aberto. As anotações salvam sozinhas
+  enquanto a pessoa digita.
+- A planta mostra em qual ambiente cada pessoa está, e o painel lista a atividade recente.
+- Fotos: cada patologia aceita várias. A imagem é reduzida no navegador (até 1280 px, JPEG) antes do
+  envio e fica guardada no próprio banco.
+- Sem internet, as alterações ficam guardadas e seguem quando a conexão volta.
 
-O botão **Importar arquivo** carrega um `inspecao.json` recebido de outra pessoa. O arquivo é
-validado antes de entrar: ambientes desconhecidos ou notas fora de 1 a 5 são recusados.
+### Ligar o site ao Firebase (uma vez)
 
-Os dados atuais são os exemplos do primeiro levantamento. Enquanto for assim, o site fica fora dos
-buscadores (`noindex` em `site/index.html`).
+1. Em https://console.firebase.google.com, crie um projeto (o Google Analytics pode ficar desligado).
+2. **Authentication → Vamos começar → Google → Ativar**, escolha o e-mail de suporte e salve.
+3. **Authentication → Configurações → Domínios autorizados**: adicione o endereço do site publicado.
+4. **Firestore Database → Criar banco de dados**, modo de produção, local `southamerica-east1`.
+5. **Firestore Database → Regras**: cole o conteúdo de [`firestore.rules`](firestore.rules) e publique.
+   O e-mail do dono do projeto está na função `dono()` desse arquivo e em `DONO`, em `site/src/lib/nuvem.js`.
+6. **Configurações do projeto → Seus apps → Web**: registre o app e copie o objeto `firebaseConfig`
+   para `site/src/firebase-config.js`.
+
+Na primeira entrada do dono, o site oferece carregar no banco as fichas de `site/src/dados/inspecao.json`.
+
+### Testar sem tocar nos dados reais
+
+O Firebase tem um emulador que roda no computador (precisa de Java 21 e do `firebase-tools`):
+
+```bash
+npx firebase-tools emulators:start --only auth,firestore --project demo-mapa-patologias
+```
+
+Em outro terminal, dentro de `site`, suba o site apontando para o emulador:
+
+```bash
+VITE_EMULADOR=1 npm run dev
+```
+
+Enquanto o banco tiver só os dados de exemplo, o site fica fora dos buscadores (`noindex` em
+`site/index.html`).
 
 ## Estrutura
 
 ```
+firestore.rules            quem pode ler e escrever no banco
+firebase.json              configuração do emulador e das regras
 site/src/
+├── firebase-config.js     endereço do projeto Firebase
 ├── dados/planta.js        geometria dos ambientes e blocos
-├── dados/inspecao.json    registros da inspeção
-├── lib/                   regras GUT, dados, relatório, rotas
-├── componentes/           planta interativa, painéis, editor
-└── paginas/               Mapa, Patologias, Matriz GUT
+├── dados/inspecao.json    fichas iniciais (carga do banco vazio)
+├── lib/                   regras GUT, banco em tempo real, fotos, relatório, rotas
+├── componentes/           planta interativa, painéis, editor, fotos, login
+└── paginas/               Mapa, Patologias, Matriz GUT, Equipe
 docs/projeto-do-site.md    intenção, decisões e o que ficou de fora
 ```
 

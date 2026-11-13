@@ -29,9 +29,8 @@ e, ao selecionar um ambiente, as patologias dele.
 
 ## O que muda
 
-- **Sem login e sem servidor.** Os dados ficam em `site/src/dados/inspecao.json`, dentro do projeto.
-  Qualquer pessoa vê o mapa. O modo edição (no próprio site) grava um rascunho no navegador e oferece
-  "Baixar inspecao.json"; para publicar, o arquivo baixado substitui o do projeto.
+- **Login com Google e edição em tempo real** (Firebase). Qualquer conta vê o mapa; só os e-mails da
+  lista da equipe editam. O `inspecao.json` serve de carga inicial e de cópia de segurança.
 - **Modelo de dados simples:** cada ambiente tem uma lista de patologias (categoria, descrição, G, U, T),
   anotações e o progresso por categoria. Some o campo "peças ocas", que já não aparecia na tela.
 - **Ambiente sem patologia registrada aparece neutro**, não verde, para o calor ficar só onde há problema.
@@ -45,7 +44,7 @@ e, ao selecionar um ambiente, as patologias dele.
 
 ## Fora do escopo
 
-- Login, edição simultânea em equipe e histórico de alterações.
+- Histórico completo de alterações (há só a lista de atividade recente).
 - Abertura animada com logo: é uma ferramenta de consulta, a planta abre direto.
 
 ## Anti-metas (o site fracassa, mesmo funcionando, se…)
@@ -80,3 +79,8 @@ Vite + React 18, CSS puro, sem bibliotecas de interface. Roteador simples com `p
   registro só no traço da planta. Toda ação mostra o resultado antes do clique: prévia da planta ao
   passar sobre pavimento, visão e categoria; ambiente aceso ao passar numa lista; retângulo do zoom;
   nota prevista no editor; "Remover" e "Concluir" mostram como a nota e o progresso vão ficar.
+- 2026-11-07: o site passa a ter login com Google e edição em tempo real (Firebase: Authentication e
+  Firestore). Qualquer conta vê; só os e-mails da lista da equipe editam. Sai o fluxo de baixar e
+  substituir o `inspecao.json`, que fica só como carga inicial e cópia de segurança.
+- 2026-11-12: fotos anexadas a cada patologia, guardadas no próprio Firestore como JPEG reduzido
+  (o Storage do Firebase exige plano pago). A cópia de segurança em JSON não inclui as fotos.

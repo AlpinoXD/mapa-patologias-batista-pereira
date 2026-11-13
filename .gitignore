@@ -4,3 +4,4 @@ dist/
 .taste-skill/
 .netlify/
 *.zip
+*-debug.log

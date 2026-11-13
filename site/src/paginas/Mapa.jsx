@@ -5,6 +5,7 @@ import { CATEGORIAS, formatarNota, gut, NOME_CATEGORIA, notaAmbiente, notaBloco,
 import { Planta } from "../componentes/Planta.jsx";
 import { PainelAmbiente, PainelResumo } from "../componentes/Paineis.jsx";
 import { MenuExportar } from "../componentes/MenuExportar.jsx";
+import { useColab } from "../lib/colab.jsx";
 
 const ICONE_CATEGORIA = { geral: Layers, estrutura: ShieldAlert, hidraulica: Droplets, eletrica: Zap, revestimentos: Grid3X3 };
 const VISOES = [
@@ -57,6 +58,16 @@ export function Mapa({ dados, edicao }) {
   const [previa, setPrevia] = useState(null); // { patch, rotulo }: o que o controle sob o cursor vai fazer
   const [destaque, setDestaque] = useState(null);
   const timer = useRef(0);
+  const { pessoas, definirOnde } = useColab();
+
+  // conta para a equipe qual ambiente estou olhando (aparece na planta dos outros)
+  useEffect(() => { definirOnde({ ambiente: estado.selecionado ?? null }); }, [estado.selecionado]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => definirOnde({ ambiente: null }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const presentes = useMemo(() => {
+    const m = {};
+    for (const p of pessoas) if (p.onde?.pagina === "/" && p.onde.ambiente) (m[p.onde.ambiente] ??= []).push(p);
+    return m;
+  }, [pessoas]);
 
   useEffect(() => {
     const voltar = () => { if (location.pathname === "/") setEstado(lerUrl()); };
@@ -110,7 +121,7 @@ export function Mapa({ dados, edicao }) {
         {pior ? <> · pior ponto: <b>{pior.s.name}</b> ({visao === "blocos" ? "média" : "GUT"} <b className="num">{formatarNota(pior.nota)}</b>)</> : " · nenhuma patologia registrada"}</span>;
 
   const selecionar = (id) => mudar({ selecionado: id === selecionado ? null : id }, true);
-  const abrirAmbiente = (id) => mudar({ visao: "ambientes", selecionado: id }, true);
+  const abrirAmbiente = (id) => mudar({ visao: INDICE[id]?.ambiente.members ? "blocos" : estado.visao === "blocos" ? "ambientes" : estado.visao, andar: INDICE[id]?.andar ?? estado.andar, selecionado: id }, true);
   const selecaoValida = selecionado && INDICE[selecionado]?.andar === andar
     && !!INDICE[selecionado].ambiente.members === (visao === "blocos") ? selecionado : null;
   const destacar = { onDestacar: setDestaque };
@@ -152,11 +163,11 @@ export function Mapa({ dados, edicao }) {
 
       <div className={`corpo${previa ? " em-previa" : ""}`}>
         <Planta andar={andar} visao={visao} itens={itens} selecionado={selecaoValida} destaque={destaque}
-          previa={previa?.rotulo} rodape={rodape} onSelecionar={selecionar} />
+          previa={previa?.rotulo} rodape={rodape} presentes={presentes} onSelecionar={selecionar} />
         {selecaoValida
           ? <PainelAmbiente key={selecaoValida} id={selecaoValida} visao={visao} filtro={filtro} dados={dados} edicao={edicao}
               onVoltar={() => mudar({ selecionado: null }, true)} onAbrirAmbiente={abrirAmbiente} {...destacar} />
-          : <PainelResumo andar={andar} visao={visao} filtro={filtro} itens={itens} onSelecionar={selecionar} {...destacar} />}
+          : <PainelResumo andar={andar} visao={visao} filtro={filtro} itens={itens} onSelecionar={selecionar} onAbrirAmbiente={abrirAmbiente} {...destacar} />}
       </div>
     </>
   );

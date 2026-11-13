@@ -13,7 +13,7 @@ const PASSO = 1.5;
  * `destaque` acende um ambiente quando o cursor passa por ele numa lista (prévia de para onde o clique leva);
  * `previa` mostra no topo que a planta exibe uma prévia de um filtro ainda não aplicado.
  */
-export function Planta({ andar, visao, itens, selecionado, destaque, previa, rodape, onSelecionar }) {
+export function Planta({ andar, visao, itens, selecionado, destaque, previa, rodape, presentes = {}, onSelecionar }) {
   const { viewBox: base, ambientes, nome } = ANDARES[andar];
   const [vb, setVb] = useState(base);
   const [dica, setDica] = useState(null);
@@ -164,6 +164,24 @@ export function Planta({ andar, visao, itens, selecionado, destaque, previa, rod
               ? <RotuloBloco key={item.s.id} s={item.s} nota={item.nota} cor={corDe(item, visao)} />
               : <RotuloSala key={item.s.id} s={item.s} valor={visao === "progresso" ? (item.prog ? `${item.prog}%` : null) : item.nota != null ? formatarNota(item.nota) : null} />)}
           </g>
+          {/* quem da equipe está olhando cada ambiente agora: contorno tracejado e a inicial na cor da pessoa */}
+          <g className="presencas" aria-hidden="true">
+            {ambientes.filter((s) => presentes[s.id]).map((s) => {
+              const [x, y] = s.r;
+              const gente = presentes[s.id];
+              return (
+                <g key={s.id} style={{ "--cor": gente[0].cor }}>
+                  {forma(s, { className: "contorno-presenca" })}
+                  {gente.slice(0, 3).map((p, i) => (
+                    <g key={p.uid} transform={`translate(${x + 9 + i * 13} ${y + 9})`} style={{ "--cor": p.cor }}>
+                      <circle r={7.5} className="bolinha-presenca" />
+                      <text textAnchor="middle" dominantBaseline="central" fontSize={8} fontWeight={700}>{(p.nome ?? "?").charAt(0).toUpperCase()}</text>
+                    </g>
+                  ))}
+                </g>
+              );
+            })}
+          </g>
           {vbPrevia && <rect className="previa-zoom" x={vbPrevia[0]} y={vbPrevia[1]} width={vbPrevia[2]} height={vbPrevia[3]} vectorEffect="non-scaling-stroke" />}
         </svg>
       </div>
@@ -172,7 +190,7 @@ export function Planta({ andar, visao, itens, selecionado, destaque, previa, rod
         {dica ? <><b>{dica.item.s.name}</b><span className="num">{resumo(dica.item, visao)}</span></> : rodape}
       </div>
 
-      {dica && <Dica {...dica} visao={visao} selecionado={dica.item.s.id === selecionado} />}
+      {dica && <Dica {...dica} visao={visao} selecionado={dica.item.s.id === selecionado} gente={presentes[dica.item.s.id]} />}
       <p className={`aviso-zoom${avisoZoom ? " visivel" : ""}`} aria-hidden>Use Ctrl + roda do mouse ou os botões + e − para aproximar</p>
     </section>
   );
@@ -221,7 +239,7 @@ function RotuloSala({ s, valor }) {
   );
 }
 
-function Dica({ item, x, y, largura, visao, selecionado }) {
+function Dica({ item, x, y, largura, visao, selecionado, gente }) {
   const { s, nota, pior, prog, qtd } = item;
   const esquerda = x > largura - 290;
   const acao = selecionado ? "Clique para fechar os detalhes"
@@ -237,6 +255,7 @@ function Dica({ item, x, y, largura, visao, selecionado }) {
             <div className="linha"><span>{visao === "blocos" ? "Média GUT" : "GUT"} · {NOME_RISCO[item.risco]}</span><span className="num">{formatarNota(nota)}</span></div>
             {pior && <div className="pior">{NOME_CATEGORIA[pior.categoria]}: {pior.descricao}</div>}
           </>}
+      {gente?.length > 0 && <div className="pior">Aqui agora: {gente.map((p) => p.nome?.split(" ")[0]).join(", ")}{gente.some((p) => p.onde?.editando) ? " (editando)" : ""}</div>}
       <div className="acao"><MousePointerClick aria-hidden /> {acao}</div>
     </div>
   );

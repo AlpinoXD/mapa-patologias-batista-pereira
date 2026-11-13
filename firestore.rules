@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// Regras de acesso do Mapa de patologias.
+// - Qualquer pessoa logada com conta Google verificada pode VER.
+// - Só os e-mails da lista config/acesso (editores ou admins) podem EDITAR.
+// - Só admins mudam a lista. O dono do projeto é admin sempre, mesmo antes de a lista existir.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function logado() { return request.auth != null && request.auth.token.email_verified == true; }
+    function email() { return request.auth.token.email.lower(); }
+    function dono() { return logado() && email() == 'cauapinho11@gmail.com'; }
+    function acesso() { return get(/databases/$(database)/documents/config/acesso).data; }
+    function admin() { return dono() || (logado() && email() in acesso().admins); }
+    function editor() { return admin() || (logado() && email() in acesso().editores); }
+
+    match /config/acesso {
+      allow read: if logado();
+      allow write: if admin()
+        && request.resource.data.keys().hasOnly(['editores', 'admins'])
+        && request.resource.data.editores is list && request.resource.data.editores.size() <= 200
+        && request.resource.data.admins is list && request.resource.data.admins.size() <= 20;
+    }
+
+    match /ambientes/{ambiente} {
+      allow read: if logado();
+      allow delete: if admin();
+      allow create, update: if editor()
+        && request.resource.data.keys().hasOnly(['patologias', 'notas', 'concluido', 'atualizadoPor', 'atualizadoEm'])
+        && request.resource.data.get('patologias', {}) is map && request.resource.data.get('patologias', {}).size() <= 200
+        && request.resource.data.get('notas', '') is string && request.resource.data.get('notas', '').size() <= 4000
+        && request.resource.data.get('concluido', {}) is map && request.resource.data.get('concluido', {}).size() <= 4
+        && request.resource.data.atualizadoPor.uid == request.auth.uid;
+    }
+
+    // fotos das patologias: imagem JPEG reduzida, guardada como texto (data URL)
+    match /fotos/{foto} {
+      allow read: if logado();
+      allow delete: if editor();
+      allow create: if editor()
+        && request.resource.data.keys().hasOnly(['ambiente', 'patologia', 'dados', 'uid', 'nome', 'quando'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.ambiente is string && request.resource.data.patologia is string
+        && request.resource.data.dados is string && request.resource.data.dados.size() <= 800000
+        && request.resource.data.dados.matches('^data:image/jpeg;base64,.*');
+    }
+
+    match /atividades/{registro} {
+      allow read: if logado();
+      allow create: if editor()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.texto is string && request.resource.data.texto.size() <= 300;
+    }
+
+    match /presenca/{uid} {
+      allow read: if logado();
+      allow write: if logado() && uid == request.auth.uid;
+    }
+  }
+}

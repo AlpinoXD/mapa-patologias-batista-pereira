@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { ANDARES, INDICE } from "../dados/planta.js";
 import { CATEGORIAS, ESCALA, formatarNota, gut, integridade, NOME_CATEGORIA, NOME_RISCO, notaAmbiente, notaBloco, progresso, risco, RISCOS } from "../lib/gut.js";
 import { corProgresso, corRisco } from "../lib/cores.js";
-import { novoId } from "../lib/dados.js";
+import { novoId } from "../lib/acoes.js";
+import { Avatar, haQuanto, primeiroNome, useColab } from "../lib/colab.jsx";
+import { nomeAmbiente, useFotos } from "../lib/nuvem.js";
 import { Link } from "../lib/rotas.jsx";
 import { EditorPatologia } from "./EditorPatologia.jsx";
+import { Fotos } from "./Fotos.jsx";
 
 const nomeFiltro = (f) => (f === "geral" ? "todas as categorias" : NOME_CATEGORIA[f]);
 
@@ -35,8 +38,9 @@ function LinhaAmbiente({ id, onClick, onDestacar, dica, children }) {
 }
 
 /* ---------- resumo do pavimento ---------- */
-export function PainelResumo({ andar, visao, filtro, itens, onSelecionar, onDestacar }) {
+export function PainelResumo({ andar, visao, filtro, itens, onSelecionar, onAbrirAmbiente, onDestacar }) {
   const nomeAndar = ANDARES[andar].nome;
+  const recentes = <AtividadeRecente onAbrirAmbiente={onAbrirAmbiente} onDestacar={onDestacar} />;
 
   if (visao === "progresso") {
     const media = itens.length ? Math.round(itens.reduce((s, i) => s + i.prog, 0) / itens.length) : 0;
@@ -67,6 +71,7 @@ export function PainelResumo({ andar, visao, filtro, itens, onSelecionar, onDest
               <span>{p === 0 ? "Pendente" : p === 100 ? "Concluído" : `${p / 25} de 4 categorias`}</span><span className="num faixa-num">{p}%</span></li>
           ))}</ul>
         </section>
+        {recentes}
       </aside>
     );
   }
@@ -117,7 +122,48 @@ export function PainelResumo({ andar, visao, filtro, itens, onSelecionar, onDest
           </li>
         </ul>
       </section>
+      {recentes}
     </aside>
+  );
+}
+
+function AtividadeRecente({ onAbrirAmbiente, onDestacar }) {
+  const { atividades } = useColab();
+  if (!atividades?.length) return null;
+  return (
+    <section className="vidro cartao-lateral">
+      <h2 className="rotulo-tecnico">Atividade recente</h2>
+      <ul className="atividades">{atividades.slice(0, 5).map((a) => (
+        <li key={a.id}>
+          <Avatar pessoa={a} tamanho={24} />
+          {a.ambiente
+            ? <button type="button" className="atividade-link" onClick={() => onAbrirAmbiente(a.ambiente)} data-dica={`Abre ${nomeAmbiente(a.ambiente)} na planta`}
+                onPointerEnter={() => onDestacar?.(a.ambiente)} onPointerLeave={() => onDestacar?.(null)}>
+                <b>{primeiroNome(a.nome)}</b> {a.texto}<small>{haQuanto(a.quando)}</small>
+              </button>
+            : <span><b>{primeiroNome(a.nome)}</b> {a.texto}<small>{haQuanto(a.quando)}</small></span>}
+        </li>
+      ))}</ul>
+    </section>
+  );
+}
+
+/** Quem mais está neste ambiente agora e quem o alterou por último. */
+function QuemEsta({ id }) {
+  const { pessoas, meta } = useColab();
+  const aqui = pessoas.filter((p) => p.onde?.ambiente === id);
+  const ultimo = meta[id];
+  if (!aqui.length && !ultimo?.por) return null;
+  return (
+    <div className="quem-esta">
+      {aqui.length > 0 && (
+        <span className="aqui-agora">
+          {aqui.map((p) => <Avatar key={p.uid} pessoa={p} tamanho={22} />)}
+          {aqui.map((p) => primeiroNome(p.nome)).join(", ")} {aqui.some((p) => p.onde.editando) ? "editando agora" : aqui.length === 1 ? "também está aqui" : "também estão aqui"}
+        </span>
+      )}
+      {ultimo?.por && <span className="meta">Última alteração: {primeiroNome(ultimo.por.nome)}, {haQuanto(ultimo.em)}</span>}
+    </div>
   );
 }
 
@@ -137,6 +183,7 @@ export function PainelAmbiente({ id, visao, filtro, dados, edicao, onVoltar, onA
           <p className="rotulo-tecnico">{ehBloco ? `${s.members.length} ambientes · somente leitura` : `${bloco?.name.split(" · ")[0] ?? ""} · pavimento ${ANDARES[andar].nome.toLowerCase()}`}</p>
           <h2 className="titulo-detalhe">{s.name}</h2>
         </div>
+        {!ehBloco && <QuemEsta id={id} />}
 
         {visao === "progresso" && !ehBloco
           ? <Progresso id={id} reg={reg} filtro={filtro} edicao={edicao} />
@@ -161,7 +208,7 @@ export function PainelAmbiente({ id, visao, filtro, dados, edicao, onVoltar, onA
 
             {ehBloco ? <>
               <MembrosBloco bloco={s} dados={dados} filtro={filtro} onAbrirAmbiente={onAbrirAmbiente} onDestacar={onDestacar} />
-              {edicao && <p className="meta">A nota do bloco é a média dos ambientes. Para editar, abra um ambiente da lista.</p>}
+              {edicao && <p className="meta">A nota do bloco é a média dos ambientes. Para editar a GUT, abra um ambiente da lista.</p>}
             </> : <Patologias id={id} reg={reg} filtro={filtro} edicao={edicao} />}
 
             {!ehBloco && edicao && <Inspecao id={id} reg={reg} edicao={edicao} />}
@@ -173,34 +220,43 @@ export function PainelAmbiente({ id, visao, filtro, dados, edicao, onVoltar, onA
 }
 
 function Patologias({ id, reg, filtro, edicao }) {
-  const [editando, setEditando] = useState(null); // id da patologia, "nova" ou null
+  const { definirOnde, usuario } = useColab();
+  const fotos = useFotos(usuario, id);
+  const [editando, setEditando] = useState(null); // id da patologia, "nova:<categoria>" ou null
   const [removendo, setRemovendo] = useState(null); // prévia: patologia sob o cursor do botão Remover
+  useEffect(() => { definirOnde({ editando: editando ? "patologia" : null }); }, [editando]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => definirOnde({ editando: null }), []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const lista = (reg?.patologias ?? []).filter((p) => filtro === "geral" || p.categoria === filtro);
-  const grupos = CATEGORIAS.map((c) => ({ ...c, itens: lista.filter((p) => p.categoria === c.id).sort((a, b) => gut(b) - gut(a)) }))
-    .filter((g) => g.itens.length);
-  const salvar = (p) => { edicao.salvarPatologia(id, p); setEditando(null); };
-  const remover = (p) => { setRemovendo(null); if (confirm(`Remover a patologia "${p.descricao}"?`)) edicao.removerPatologia(id, p.id); };
-  const nova = { id: novoId(id), categoria: filtro === "geral" ? "estrutura" : filtro, descricao: "", g: 1, u: 1, t: 1 };
+  const categorias = CATEGORIAS.filter((c) => filtro === "geral" || filtro === c.id);
+  // quem edita vê todas as categorias, mesmo vazias, cada uma com o seu "Adicionar"
+  const grupos = categorias.map((c) => ({ ...c, itens: lista.filter((p) => p.categoria === c.id).sort((a, b) => gut(b) - gut(a)) }))
+    .filter((g) => edicao || g.itens.length);
+  const salvar = (p) => { edicao.salvarPatologia(id, p).catch(() => {}); setEditando(null); };
+  const remover = (p) => { setRemovendo(null); if (confirm(`Remover a patologia "${p.descricao}"?`)) edicao.removerPatologia(id, p.id).catch(() => {}); };
   const notaAtual = notaAmbiente(reg);
   const notaSem = (p) => notaAmbiente({ patologias: (reg?.patologias ?? []).filter((x) => x.id !== p.id) });
 
   return (
     <section>
-      <div className="cabeca-secao">
-        <h3 className="rotulo-tecnico">Patologias · {lista.length}</h3>
-        {edicao && editando !== "nova" && (
-          <button type="button" className="botao-texto" onClick={() => setEditando("nova")} data-dica="Abre o formulário de uma nova patologia neste ambiente">
-            <Plus /> Adicionar
-          </button>
-        )}
-      </div>
-      {editando === "nova" && <EditorPatologia inicial={nova} notaAtual={notaAtual} reg={reg} onSalvar={salvar} onCancelar={() => setEditando(null)} />}
-      {!lista.length && editando !== "nova" && <p className="vazio">Nenhuma patologia registrada {filtro === "geral" ? "neste ambiente" : `em ${NOME_CATEGORIA[filtro]}`}.</p>}
+      <h3 className="rotulo-tecnico">Patologias · {lista.length}</h3>
+      {!lista.length && !edicao && <p className="vazio">Nenhuma patologia registrada {filtro === "geral" ? "neste ambiente" : `em ${NOME_CATEGORIA[filtro]}`}.</p>}
       {grupos.map((g) => (
         <div key={g.id} className="grupo-cat">
-          {filtro === "geral" && <h4>{g.nome}</h4>}
+          <div className="cabeca-secao">
+            <h4>{g.nome} <span className="num">{g.itens.length ? `· GUT ${formatarNota(Math.max(...g.itens.map(gut)))}` : ""}</span></h4>
+            {edicao && editando !== `nova:${g.id}` && (
+              <button type="button" className="botao-texto" onClick={() => setEditando(`nova:${g.id}`)} data-dica={`Registra uma patologia de ${g.nome} neste ambiente`}>
+                <Plus /> Adicionar
+              </button>
+            )}
+          </div>
+          {editando === `nova:${g.id}` && (
+            <EditorPatologia inicial={{ id: novoId(id), categoria: g.id, descricao: "", g: 1, u: 1, t: 1 }} reg={reg} onSalvar={salvar} onCancelar={() => setEditando(null)} />
+          )}
+          {edicao && !g.itens.length && editando !== `nova:${g.id}` && <p className="vazio-cat">Sem patologia registrada.</p>}
           {g.itens.map((p) => editando === p.id
-            ? <EditorPatologia key={p.id} inicial={p} notaAtual={notaAtual} reg={reg} onSalvar={salvar} onCancelar={() => setEditando(null)} />
+            ? <EditorPatologia key={p.id} inicial={p} reg={reg} onSalvar={salvar} onCancelar={() => setEditando(null)} />
             : (
               <div key={p.id} className={`patologia${removendo === p.id ? " vai-remover" : ""}`}>
                 <span className="desc">{p.descricao}</span>
@@ -210,8 +266,9 @@ function Patologias({ id, reg, filtro, edicao }) {
                     <span key={k}>{i > 0 && " · "}<abbr title={`${ESCALA[k].nome} ${p[k]}: ${ESCALA[k].niveis[p[k] - 1]}`}>{k.toUpperCase()} {p[k]}</abbr></span>
                   ))}
                 </span>
+                <Fotos ambiente={id} patologia={p} fotos={fotos.filter((f) => f.patologia === p.id)} edicao={edicao} />
                 {edicao && <span className="acoes-linha">
-                  <button type="button" className="botao-texto" onClick={() => setEditando(p.id)} data-dica="Abre esta patologia no formulário"><Pencil /> Editar</button>
+                  <button type="button" className="botao-texto" onClick={() => setEditando(p.id)} data-dica="Abre esta patologia para mudar a descrição ou as notas G, U e T"><Pencil /> Editar GUT</button>
                   <button type="button" className="botao-texto perigo" onClick={() => remover(p)}
                     onPointerEnter={() => setRemovendo(p.id)} onPointerLeave={() => setRemovendo(null)}
                     onFocus={() => setRemovendo(p.id)} onBlur={() => setRemovendo(null)}><Trash2 /> Remover</button>
@@ -248,7 +305,7 @@ function Inspecao({ id, reg, edicao }) {
                   aria-label={`${c.nome}: ${feito ? "concluída, reabrir" : "marcar como concluída"}`}
                   onPointerEnter={() => setSobre(c.id)} onPointerLeave={() => setSobre(null)}
                   onFocus={() => setSobre(c.id)} onBlur={() => setSobre(null)}
-                  onClick={() => edicao.alternarConcluido(id, c.id)}>
+                  onClick={() => edicao.alternarConcluido(id, c.id).catch(() => {})}>
                   <Check /> <span className="estado">{feito ? "Concluída" : "Pendente"}</span>
                   <span className="acao-hover">{feito ? "Reabrir" : "Concluir"}</span>
                 </button>
@@ -261,13 +318,43 @@ function Inspecao({ id, reg, edicao }) {
 }
 
 function Notas({ id, reg, edicao }) {
-  if (!edicao) return reg?.notas ? <section><h3 className="rotulo-tecnico">Anotações</h3><p className="notas">{reg.notas}</p></section> : null;
+  const { pessoas, definirOnde } = useColab();
+  const remoto = reg?.notas ?? "";
+  const [texto, setTexto] = useState(remoto);
+  const [estado, setEstado] = useState("");
+  const focado = useRef(false), mudou = useRef(false), timer = useRef(0);
+  const outro = pessoas.find((p) => p.onde?.ambiente === id && p.onde?.editando === "notas");
+
+  // o texto que chega de outra pessoa entra na hora, a não ser que eu esteja digitando
+  useEffect(() => { if (!focado.current) setTexto(remoto); }, [remoto]);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  if (!edicao) return remoto ? <section><h3 className="rotulo-tecnico">Anotações</h3><p className="notas">{remoto}</p></section> : null;
+
+  const gravar = (valor, registrar) => {
+    setEstado("salvando");
+    edicao.definirNotas(id, valor, registrar).then(() => setEstado("salvo"), () => setEstado("erro"));
+  };
   return (
     <section className="campo">
       <label htmlFor={`notas-${id}`} className="rotulo-tecnico">Anotações</label>
-      <textarea id={`notas-${id}`} rows={3} defaultValue={reg?.notas ?? ""} placeholder="Observações do ambiente (medições, fotos, contexto)"
-        onBlur={(e) => { if (e.target.value !== (reg?.notas ?? "")) edicao.definirNotas(id, e.target.value); }} />
-      <p className="meta">Salva ao sair do campo, no rascunho deste navegador.</p>
+      {outro && <p className="aviso-outro"><Avatar pessoa={outro} tamanho={18} /> {primeiroNome(outro.nome)} está escrevendo aqui agora</p>}
+      <textarea id={`notas-${id}`} rows={3} value={texto} placeholder="Observações do ambiente (medições, fotos, contexto)"
+        onFocus={() => { focado.current = true; definirOnde({ editando: "notas" }); }}
+        onChange={(e) => {
+          const v = e.target.value;
+          setTexto(v); mudou.current = true; setEstado("digitando");
+          clearTimeout(timer.current);
+          timer.current = setTimeout(() => gravar(v, false), 700);
+        }}
+        onBlur={() => {
+          focado.current = false; definirOnde({ editando: null });
+          clearTimeout(timer.current);
+          if (mudou.current) { gravar(texto, true); mudou.current = false; }
+        }} />
+      <p className="meta" aria-live="polite">
+        {estado === "salvando" ? "Salvando…" : estado === "salvo" ? "Salvo para toda a equipe." : estado === "erro" ? "Não foi possível salvar." : estado === "digitando" ? "Digitando…" : "Salva sozinho enquanto você escreve."}
+      </p>
     </section>
   );
 }
@@ -299,7 +386,7 @@ function Progresso({ id, reg, filtro, edicao }) {
       <span className="meta">concluído · {nomeFiltro(filtro)}</span>
     </div>
     <Inspecao id={id} reg={reg} edicao={edicao} />
-    {!edicao && <p className="meta">Ative o modo edição (lápis no topo) para marcar as categorias concluídas.</p>}
+    
     <Notas id={id} reg={reg} edicao={edicao} />
   </>;
 }

@@ -32,10 +32,10 @@ export function Fotos({ ambiente, patologia, fotos, edicao }) {
         </button>
       ))}
       {edicao && <>
-        <button type="button" className="miniatura adicionar" onClick={() => entrada.current.click()} disabled={estado === "enviando"}
+        <button type="button" className="botao anexar" onClick={() => entrada.current.click()} disabled={estado === "enviando"}
           aria-label={`Anexar foto a ${patologia.descricao}`} data-dica="Anexa fotos a esta patologia (câmera ou galeria); a imagem é reduzida antes do envio">
           {estado === "enviando" ? <LoaderCircle className="girando" /> : <ImagePlus />}
-          <span>{estado === "enviando" ? "Enviando" : "Foto"}</span>
+          {estado === "enviando" ? "Enviando…" : "Anexar foto"}
         </button>
         <input ref={entrada} type="file" accept="image/*" multiple hidden onChange={enviar} />
       </>}

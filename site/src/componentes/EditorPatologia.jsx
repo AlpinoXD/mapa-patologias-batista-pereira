@@ -69,6 +69,8 @@ export function EditorPatologia({ inicial, reg, onSalvar, onCancelar }) {
         Ao salvar, a nota do ambiente {antes === depois ? <>fica em <b className="num">{formatarNota(depois)}</b></> : <>vai de <b className="num">{formatarNota(antes)}</b> para <b className="num">{formatarNota(depois)}</b></>}.
       </p>
 
+      <p className="meta">As fotos são anexadas depois de salvar: use o botão “Anexar foto” que aparece nesta patologia.</p>
+
       <div className="acoes">
         <button type="submit" className="botao primario" data-som="salvar">Salvar patologia</button>
         <button type="button" className="botao" onClick={onCancelar}>Cancelar</button>

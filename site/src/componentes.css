@@ -346,3 +346,5 @@ th[aria-sort] .ordenar { color: var(--primary); }
 .visor-foto img { display: block; max-width: 100%; max-height: 76dvh; margin: 0 auto; }
 .visor-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 16px; padding: 10px 14px; }
 .visor-barra .meta { flex: 1 1 200px; }
+.botao.anexar { height: 32px; padding: 0 12px; font-size: 12px; border-style: dashed; color: var(--primary); }
+@media (max-width: 760px) { .botao.anexar { height: 44px; } }

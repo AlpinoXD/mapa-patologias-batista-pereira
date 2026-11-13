@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
-import { Download, Plus, ShieldCheck, Upload, X } from "lucide-react";
+import { Download, Plus, ShieldCheck, Trash2, Upload, X } from "lucide-react";
 import { Avatar, haQuanto, primeiroNome, useColab } from "../lib/colab.jsx";
-import { DONO, nomeAmbiente } from "../lib/nuvem.js";
+import { apagarTudo, DONO, nomeAmbiente, senhaCorreta } from "../lib/nuvem.js";
 
 const valido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
@@ -98,6 +98,65 @@ export function Equipe({ acesso, inspecao }) {
           </section>
         </div>
       </div>
+
+      <ZonaDePerigo inspecao={inspecao} />
     </>
+  );
+}
+
+/** Botão vermelho: 1) abrir, 2) digitar a senha, 3) confirmar. Cada passo diz o que vai acontecer. */
+function ZonaDePerigo({ inspecao }) {
+  const [etapa, setEtapa] = useState("fechada"); // fechada → senha → pronta → apagando → feito
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState("");
+  const [total, setTotal] = useState(0);
+  const campo = useRef(null);
+
+  const abrir = () => { setEtapa("senha"); setSenha(""); setErro(""); setTimeout(() => campo.current?.focus(), 50); };
+  const cancelar = () => { setEtapa("fechada"); setSenha(""); setErro(""); };
+  const conferir = async (e) => {
+    e.preventDefault();
+    if (await senhaCorreta(senha)) { setEtapa("pronta"); setErro(""); } else { setErro("Senha incorreta."); campo.current?.select(); }
+  };
+  const apagar = async () => {
+    setEtapa("apagando");
+    try { setTotal(await apagarTudo()); setEtapa("feito"); } catch { setErro("Não foi possível apagar. Confira a conexão e se as regras do Firestore foram publicadas."); setEtapa("pronta"); }
+  };
+
+  return (
+    <section className="vidro painel-pagina zona-perigo" aria-labelledby="perigo-titulo">
+      <h2 id="perigo-titulo" className="rotulo-tecnico">Zona de perigo</h2>
+      {etapa === "fechada" && <>
+        <p className="meta">Apaga para toda a equipe todas as patologias, notas GUT, fotos, anotações, progresso e o histórico de atividade. A lista de pessoas com acesso é mantida.</p>
+        <div className="acoes">
+          <button type="button" className="botao apagar" onClick={abrir} data-dica="Pede uma senha antes de apagar qualquer coisa; nada é apagado neste clique"><Trash2 /> Apagar tudo</button>
+          <button type="button" className="botao" onClick={inspecao.baixarCopia} data-dica="Recomendado antes de apagar: baixa os dados (sem as fotos)"><Download /> Baixar cópia antes</button>
+        </div>
+      </>}
+      {etapa === "senha" && (
+        <form className="adicionar-email" onSubmit={conferir}>
+          <label className="sr" htmlFor="senha-apagar">Senha para apagar</label>
+          <input id="senha-apagar" ref={campo} type="password" value={senha} onChange={(e) => { setSenha(e.target.value); setErro(""); }}
+            placeholder="Senha" autoComplete="off" aria-invalid={!!erro} />
+          <button type="submit" className="botao apagar" disabled={!senha} data-dica="Confere a senha; ainda não apaga nada">Confirmar senha</button>
+          <button type="button" className="botao-texto" onClick={cancelar}>Cancelar</button>
+          {erro && <p className="erro" role="alert">{erro}</p>}
+        </form>
+      )}
+      {(etapa === "pronta" || etapa === "apagando") && <>
+        <p className="aviso-perigo" role="alert"><b>Senha correta.</b> O próximo clique apaga tudo, para todos, e não dá para desfazer.</p>
+        <div className="acoes">
+          <button type="button" className="botao apagar forte" onClick={apagar} disabled={etapa === "apagando"} data-dica="Apaga agora, para toda a equipe, sem volta">
+            <Trash2 /> {etapa === "apagando" ? "Apagando…" : "Apagar tudo agora"}
+          </button>
+          <button type="button" className="botao-texto" onClick={cancelar} disabled={etapa === "apagando"}>Cancelar</button>
+        </div>
+        {erro && <p className="erro" role="alert">{erro}</p>}
+      </>}
+      {etapa === "feito" && <>
+        <p role="status"><b>Tudo apagado</b> ({total} registros). O mapa está limpo para toda a equipe.</p>
+        <div className="acoes"><button type="button" className="botao" onClick={cancelar}>Fechar</button></div>
+      </>}
+    </section>
   );
 }

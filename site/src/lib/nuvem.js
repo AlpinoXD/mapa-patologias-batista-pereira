@@ -217,3 +217,27 @@ export async function removerFotosDe(patologia) {
   const s = await getDocs(query(collection(db, "fotos"), where("patologia", "==", patologia)));
   await Promise.all(s.docs.map((d) => deleteDoc(d.ref)));
 }
+
+/* ---------- apagar tudo ---------- */
+// shortcut: a senha é conferida no navegador (só o hash vai no código). Quem barra de verdade são as regras do
+// Firestore: apagar exige ser administrador. Trocar por uma Cloud Function se a senha precisar ser secreta.
+const HASH_SENHA = "f4bb781f0404591787f6c706466bb6db65b2a2f80d41f576285b34322b58f436";
+export async function senhaCorreta(texto) {
+  const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("") === HASH_SENHA;
+}
+
+/** Apaga fichas, anotações, fotos e atividade. A lista da equipe e as contas ficam, senão ninguém mais entra. */
+export async function apagarTudo() {
+  let total = 0;
+  for (const nome of ["ambientes", "fotos", "atividades"]) {
+    const s = await getDocs(collection(db, nome));
+    for (let i = 0; i < s.docs.length; i += 400) {
+      const lote = writeBatch(db);
+      s.docs.slice(i, i + 400).forEach((d) => lote.delete(d.ref));
+      await lote.commit();
+    }
+    total += s.size;
+  }
+  return total;
+}

@@ -46,6 +46,7 @@ service cloud.firestore {
 
     match /atividades/{registro} {
       allow read: if logado();
+      allow delete: if admin();
       allow create: if editor()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.texto is string && request.resource.data.texto.size() <= 300;

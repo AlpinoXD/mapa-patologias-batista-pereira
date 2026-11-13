@@ -282,7 +282,7 @@ th[aria-sort] .ordenar { color: var(--primary); }
 
 .atividades { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .atividades li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.4; }
-.atividades li > span, .atividade-link { flex: 1; min-width: 0; }
+.atividades li > span:not(.avatar), .atividade-link { flex: 1; min-width: 0; }
 .atividades b { font-weight: 600; }
 .atividades small { display: block; color: var(--muted-foreground); font-size: 11px; margin-top: 2px; }
 .atividade-link { padding: 4px 6px; margin: -4px -6px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; transition: background-color .16s var(--ease-out); }
@@ -348,3 +348,19 @@ th[aria-sort] .ordenar { color: var(--primary); }
 .visor-barra .meta { flex: 1 1 200px; }
 .botao.anexar { height: 32px; padding: 0 12px; font-size: 12px; border-style: dashed; color: var(--primary); }
 @media (max-width: 760px) { .botao.anexar { height: 44px; } }
+
+/* ---------- fotos no formulário e zona de perigo ---------- */
+.miniatura.com-remover { position: relative; cursor: default; }
+.tirar-foto {
+  position: absolute; top: 2px; right: 2px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0;
+  border: 0; border-radius: 50%; background: oklch(0.1 0.01 250 / 80%); color: #fff; cursor: pointer;
+}
+.tirar-foto svg { width: 13px; height: 13px; }
+.zona-perigo { margin-top: var(--gap); border-color: oklch(0.65 0.25 25 / 45%); }
+.zona-perigo .rotulo-tecnico { color: oklch(0.75 0.17 20); }
+.botao.apagar { background: oklch(0.65 0.25 25); border-color: oklch(0.65 0.25 25); color: #fff; font-weight: 600; }
+.botao.apagar:disabled { opacity: .45; cursor: default; }
+.botao.apagar.forte { box-shadow: 0 0 24px -4px oklch(0.65 0.25 25); }
+.aviso-perigo { padding: 10px 12px; border-radius: 10px; background: oklch(0.65 0.25 25 / 12%); color: oklch(0.88 0.07 20); font-size: 13px; }
+@media (hover: hover) and (pointer: fine) { .botao.apagar:not(:disabled):hover { background: oklch(0.7 0.24 25); border-color: oklch(0.7 0.24 25); } }
+@media (max-width: 760px) { .tirar-foto { width: 28px; height: 28px; } }

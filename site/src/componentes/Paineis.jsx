@@ -232,7 +232,15 @@ function Patologias({ id, reg, filtro, edicao }) {
   // quem edita vê todas as categorias, mesmo vazias, cada uma com o seu "Adicionar"
   const grupos = categorias.map((c) => ({ ...c, itens: lista.filter((p) => p.categoria === c.id).sort((a, b) => gut(b) - gut(a)) }))
     .filter((g) => edicao || g.itens.length);
-  const salvar = (p) => { edicao.salvarPatologia(id, p).catch(() => {}); setEditando(null); };
+  const [avisoFoto, setAvisoFoto] = useState("");
+  const salvar = async (p, arquivos = []) => {
+    setEditando(null);
+    edicao.salvarPatologia(id, p).catch(() => {});
+    setAvisoFoto("");
+    for (const arquivo of arquivos) {
+      try { await edicao.anexarFoto(id, p, arquivo); } catch (e) { setAvisoFoto(e.code ? "Não foi possível enviar uma das fotos. Verifique a conexão." : e.message); }
+    }
+  };
   const remover = (p) => { setRemovendo(null); if (confirm(`Remover a patologia "${p.descricao}"?`)) edicao.removerPatologia(id, p.id).catch(() => {}); };
   const notaAtual = notaAmbiente(reg);
   const notaSem = (p) => notaAmbiente({ patologias: (reg?.patologias ?? []).filter((x) => x.id !== p.id) });
@@ -240,6 +248,7 @@ function Patologias({ id, reg, filtro, edicao }) {
   return (
     <section>
       <h3 className="rotulo-tecnico">Patologias · {lista.length}</h3>
+      {avisoFoto && <p className="erro" role="alert">{avisoFoto}</p>}
       {!lista.length && !edicao && <p className="vazio">Nenhuma patologia registrada {filtro === "geral" ? "neste ambiente" : `em ${NOME_CATEGORIA[filtro]}`}.</p>}
       {grupos.map((g) => (
         <div key={g.id} className="grupo-cat">

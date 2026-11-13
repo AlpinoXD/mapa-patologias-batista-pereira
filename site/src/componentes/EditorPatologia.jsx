@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CATEGORIAS, ESCALA, formatarNota, gut, NOME_RISCO, notaAmbiente, risco } from "../lib/gut.js";
+import { ImagePlus, X } from "lucide-react";
 import { corRisco } from "../lib/cores.js";
 
 /**
@@ -12,7 +13,16 @@ export function EditorPatologia({ inicial, reg, onSalvar, onCancelar }) {
   const [sobre, setSobre] = useState(null); // { k, n }: nota sob o cursor
   const [erro, setErro] = useState("");
   const descRef = useRef(null);
+  const entrada = useRef(null);
+  const [fotos, setFotos] = useState([]); // { arquivo, url }: escolhidas agora, enviadas ao salvar
   useEffect(() => { descRef.current?.focus(); }, []);
+  useEffect(() => () => fotos.forEach((f) => URL.revokeObjectURL(f.url)), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const escolher = (e) => {
+    const novas = [...e.target.files].filter((a) => a.type.startsWith("image/")).map((arquivo) => ({ arquivo, url: URL.createObjectURL(arquivo) }));
+    e.target.value = "";
+    setFotos((f) => [...f, ...novas]);
+  };
+  const tirar = (i) => setFotos((f) => { URL.revokeObjectURL(f[i].url); return f.filter((_, j) => j !== i); });
 
   const exibido = sobre ? { ...p, [sobre.k]: sobre.n } : p;
   const nota = gut(exibido);
@@ -23,7 +33,7 @@ export function EditorPatologia({ inicial, reg, onSalvar, onCancelar }) {
   const salvar = (e) => {
     e.preventDefault();
     if (!p.descricao.trim()) { setErro("Descreva a patologia antes de salvar."); descRef.current.focus(); return; }
-    onSalvar({ ...p, descricao: p.descricao.trim() });
+    onSalvar({ ...p, descricao: p.descricao.trim() }, fotos.map((f) => f.arquivo));
   };
 
   return (
@@ -69,7 +79,21 @@ export function EditorPatologia({ inicial, reg, onSalvar, onCancelar }) {
         Ao salvar, a nota do ambiente {antes === depois ? <>fica em <b className="num">{formatarNota(depois)}</b></> : <>vai de <b className="num">{formatarNota(antes)}</b> para <b className="num">{formatarNota(depois)}</b></>}.
       </p>
 
-      <p className="meta">As fotos são anexadas depois de salvar: use o botão “Anexar foto” que aparece nesta patologia.</p>
+      <div className="campo">
+        <span className="rotulo-tecnico">Fotos {fotos.length > 0 && `· ${fotos.length}`}</span>
+        <div className="fotos">
+          {fotos.map((f, i) => (
+            <span key={f.url} className="miniatura com-remover">
+              <img src={f.url} alt={`Foto ${i + 1} a anexar`} />
+              <button type="button" className="tirar-foto" onClick={() => tirar(i)} aria-label={`Tirar foto ${i + 1}`} data-dica="Tira esta foto antes de salvar"><X /></button>
+            </span>
+          ))}
+          <button type="button" className="botao anexar" onClick={() => entrada.current.click()} data-dica="Escolhe fotos da câmera ou da galeria; elas são enviadas quando você salvar">
+            <ImagePlus /> Anexar foto
+          </button>
+          <input ref={entrada} type="file" accept="image/*" multiple hidden onChange={escolher} />
+        </div>
+      </div>
 
       <div className="acoes">
         <button type="submit" className="botao primario" data-som="salvar">Salvar patologia</button>
